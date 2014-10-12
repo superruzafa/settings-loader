@@ -1,0 +1,11 @@
+{
+    "name": "superruzafa/settings-loader",
+    "description": "A settings loader",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Alfonso Ruzafa",
+            "email": "superruzafa@gmail.com"
+        }
+    ]
+}
