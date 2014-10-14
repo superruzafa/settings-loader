@@ -68,9 +68,71 @@ class XmlLoader implements Loader
     {
         $context = array_merge($context, $this->extractContext($element));
         if ('settings' == $element->localName) {
+            $this->interpolate($context);
             $this->settings[] = $context;
         }
         $this->walkSubNodes($element, $context);
+    }
+
+    /**
+     * Interpolates string context values with values of other keys in the context.
+     * @param   array   &$context   Context whose variables will be interpolated
+     */
+    private function interpolate(array &$context)
+    {
+        $stack = $solvedContext = array();
+        foreach ($context as $key => &$value) {
+            $value = $this->doInterpolation($key, $context, $stack, $solvedContext);
+        }
+    }
+
+    /**
+     * Auxiliar recursive method. Does the recursive interpolation.
+     *
+     * @param   string  $key            Current context's key being iterated
+     * @param   array   $context        Current context
+     * @param   array   $stack          Stack to store the keys that are being interpolated
+     * @param   array   $solvedContext  Pseudo-context that stores already resolved interpolations
+     * @return  mixed
+     */
+    private function doInterpolation($key, $context, & $stack, & $solvedContext)
+    {
+        // Matches things like {{whatever}}, {{ what}ever }}, {{what}e}v}e}r }}...
+        // and extracts the string comprised between "{{" and "}}"
+        $regex = '/\{\{\s*((?:(?!}})\S)+)\s*}}/';
+
+        if (isset($solvedContext[$key])) {
+            return $solvedContext[$key];
+        }
+
+        if (in_array($key, $stack)) {
+            trigger_error(sprintf('Cyclic recursion: %s -> %s', implode(' -> ', $stack), $key), E_USER_WARNING);
+            return $solvedContext[$key] = '';
+        }
+
+        if (!isset($context[$key])) {
+            trigger_error(sprintf('Undefined key: "%s"', $key), E_USER_WARNING);
+            return $solvedContext[$key] = '';
+        }
+
+        if (!is_string($context[$key]) || !preg_match($regex, $context[$key])) {
+            return $solvedContext[$key] = $context[$key];
+        }
+
+        $_this = $this;
+        array_push($stack, $key);
+        $solvedContext[$key] = preg_replace_callback($regex, function($matches) use ($context, & $stack, & $solvedContext, $_this) {
+            list(, $subkey) = $matches;
+            $value = $_this->doInterpolation($subkey, $context, $stack, $solvedContext);
+            if (is_array($value)) {
+                trigger_error(sprintf('Array interpolation: "%s"', $subkey), E_USER_WARNING);
+                $value = '<array>';
+            }
+            return $value;
+        }, $context[$key]);
+        array_pop($stack);
+
+        return $solvedContext[$key];
     }
 
     /**
