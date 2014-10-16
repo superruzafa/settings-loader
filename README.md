@@ -1,6 +1,8 @@
 Settings Loader
 ===============
 
+[![Build Status](https://travis-ci.org/superruzafa/settings-loader.svg?branch=master)](https://travis-ci.org/superruzafa/settings-loader)
+
 The settings loader is a library that loads settings from several sources (currently only XML is supported).
 
 XML Loader

@@ -11,7 +11,7 @@ use Superruzafa\Settings\Loader;
 class XmlLoader implements Loader
 {
     /** @var string */
-    const SETTINGS_XMLNS = 'http://github.com/superruzafa/settings-loader';
+    const SETTINGS_LOADER_XMLNS = 'http://github.com/superruzafa/settings-loader';
 
     /** @var array */
     private $settings = array();
@@ -24,7 +24,7 @@ class XmlLoader implements Loader
     public function __construct(DOMDocument $xml)
     {
         $this->xpath = new DOMXPath($xml);
-        $this->xpath->registerNamespace('s', self::SETTINGS_XMLNS);
+        $this->xpath->registerNamespace('s', self::SETTINGS_LOADER_XMLNS);
     }
 
     /** @inheritdoc */
@@ -64,7 +64,7 @@ class XmlLoader implements Loader
      * @param   DOMElement  $element
      * @param   array       $context
      */
-    private function parseSettings(DomElement $element, array $context)
+    private function parseSettings(DOMElement $element, array $context)
     {
         $context = array_merge($context, $this->extractContext($element));
         if ('settings' == $element->localName) {
@@ -76,6 +76,7 @@ class XmlLoader implements Loader
 
     /**
      * Interpolates string context values with values of other keys in the context.
+     *
      * @param   array   &$context   Context whose variables will be interpolated
      */
     private function interpolate(array &$context)
@@ -87,7 +88,7 @@ class XmlLoader implements Loader
     }
 
     /**
-     * Auxiliar recursive method. Does the recursive interpolation.
+     * Auxiliary recursive method. Does the recursive interpolation.
      *
      * @param   string  $key            Current context's key being iterated
      * @param   array   $context        Current context
@@ -144,7 +145,10 @@ class XmlLoader implements Loader
     private function extractContext(DOMElement $element)
     {
         $context = array();
-        $nodes = $this->query('child::*[local-name() = name()] | attribute::*[local-name() = name()]', $element);
+
+        // Finds those elements and attributes defined in the default namespace
+        $xpathExpression = 'child::*[local-name() = name()] | attribute::*[local-name() = name()]';
+        $nodes = $this->query($xpathExpression, $element);
         foreach ($nodes as $node) {
             $key = $node->nodeName;
             $value = $node->nodeValue;
@@ -160,11 +164,11 @@ class XmlLoader implements Loader
     }
 
     /**
-     * Perform an XPath query.
+     * Performs an XPath query.
      *
      * @param   string      $xpathExpression
      * @param   DOMNode     $context
-     * @return  array
+     * @return  DOMElement[]
      */
     private function query($xpathExpression, DOMNode $context =  null)
     {
